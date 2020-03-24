@@ -36,11 +36,11 @@ const int LINE_3  = 16;
 const int LINE_4  = 24;
    
 WiFiClient espClient;
-const char* ssid           = "xxx";
-const char* password       = "xxx";
+const char* ssid           = "xxx";    // REPLACE WITH YOUR DATA
+const char* password       = "xxx";    // REPLACE WITH YOUR DATA
 const char* server         = "data-live.flightradar24.com";
 const unsigned short port  = 80;
-const String area          = "<long max>,<long min>,<lat min>,<lat max>"; //ex : 40.00,39.50,10.50,11.00
+const String area          = "<long max>,<long min>,<lat min>,<lat max>"; //REPLACE WITH YOUR DATA ex : 40.00,39.50,10.50,11.00
 const String path          = "/zones/fcgi/feed.js?bounds="+area+"&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=0&maxage=14400&gliders=1&stats=0&ems=1";
 
 int display_brightness = 127;
