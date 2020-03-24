@@ -30,20 +30,21 @@ uint16_t myBLACK   = display.color565(0, 0, 0);
 uint16_t myCOLORS[8]={myRED,myGREEN,myBLUE,myWHITE,myYELLOW,myCYAN,myMAGENTA,myBLACK};
 
 const int OFFSETX = 0;
-const int LINE_1 = 0;
-const int LINE_2 = 8;
-const int LINE_3 = 16;
-const int LINE_4 = 24;
-
+const int LINE_1  = 0;
+const int LINE_2  = 8;
+const int LINE_3  = 16;
+const int LINE_4  = 24;
+   
 WiFiClient espClient;
-const char* ssid           = "xxxx";
-const char* password       = "xxxx";
-const char* server         = "192.168.1.111";
-const short port           = 5000;
+const char* ssid           = "xxx";
+const char* password       = "xxx";
+const char* server         = "data-live.flightradar24.com";
+const unsigned short port  = 80;
+const String area          = "<long max>,<long min>,<lat min>,<lat max>"; //ex : 40.00,39.50,10.50,11.00
+const String path          = "/zones/fcgi/feed.js?bounds="+area+"&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=0&maxage=14400&gliders=1&stats=0&ems=1";
 
-
-int display_brightness = 255;
-int display_draw_time = 15;
+int display_brightness = 127;
+int display_draw_time  = 15;
 
 #ifdef ESP8266
 // ISR for display refresh
@@ -55,7 +56,7 @@ void display_updater()
 
 void display_update_enable(bool is_enable)
 {
-
+ 
 #ifdef ESP8266
   if (is_enable)
     display_ticker.attach(0.002, display_updater);
@@ -70,10 +71,12 @@ void display_flight(char* sfrom,char* sto,char* sac,char* salt, char* sspeed,cha
   display.clearDisplay();
   display.setBrightness(display_brightness);
   display.setTextColor(myCYAN);
+  
   display.setCursor(OFFSETX,LINE_1);
   display.print(sfrom);
   display.setTextColor(myCYAN);
   display.print(">");
+  
   display.print(sto);
   display.setCursor(OFFSETX,LINE_2);
   display.setTextColor(myWHITE);
@@ -91,39 +94,20 @@ void display_flight(char* sfrom,char* sto,char* sac,char* salt, char* sspeed,cha
   display.print(sac);
   
 }
-void display_test_screen(){
-  
-  display.clearDisplay();
-  display.setBrightness(display_brightness);
-  display.setTextColor(myCYAN);
-  display.setCursor(OFFSETX,LINE_1);
-  display.print("EBLG>>KLAS");
-  display.setTextColor(myMAGENTA);
-  display.setCursor(OFFSETX,LINE_2);
-  display.print("B744");
-
-  display.setTextColor(myGREEN);
-  display.setCursor(OFFSETX,LINE_3);
-  display.print("10000 ft");
-  display.setCursor(OFFSETX,LINE_4);
-  display.setTextColor(myYELLOW);
-  display.print("140 kts");
-
-}
-
 
 void display_network_settings(String wifi,String ip,String srv, int port){
   display.clearDisplay();
   display.setBrightness(display_brightness);
-  display.setTextColor(myCYAN);
+  display.setTextColor(myRED);
   display.setCursor(2,0);
-  display.print("WIFI:");
+  display.print("W:");
   display.print(wifi);
 }
 
 void setup() {
   Serial.begin(9600);
-  
+  display.setMuxDelay(1,1,1,1,1);
+
   display.begin(16);
   display.clearDisplay();
   display_update_enable(true);
@@ -138,15 +122,6 @@ void setup() {
   display_network_settings(ssid,"x.x.x.x",server,port);
   delay(3000);
   display.clearDisplay();
-  // Define your display layout here, e.g. 1/8 step
-  //display_test_screen();
-  
-
-  // Define your scan pattern here {LINE, ZIGZAG, ZAGGIZ} (default is LINE)
-  //display.setScanPattern(ZIGZAG);
-
-  // Define multiplex implemention here {BINARY, STRAIGHT} (default is BINARY)
-  //display.setMuxPattern(STRAIGHT);
 
 }
 
@@ -163,7 +138,7 @@ String get_flight_details() {
     return "Connection closed";
   }
 
-  String url = "/";
+  String url = path;
 
   Serial.print("Requesting URL: ");
   Serial.println(url);
@@ -185,41 +160,80 @@ String get_flight_details() {
   // Read all the lines of the reply from server and print them to Serial
 
   while (client.available()) {
-    results = client.readStringUntil('\r');
+    results += client.readStringUntil(']');
+    break;
   }
 
   Serial.println();
   Serial.println("closing connection");
   results.remove(0,1);  // Removing nlc
+
+  Serial.println("Fetched data: " +results);
   return results;
 }
 
 void process_flight(String flight){
+
   Serial.println("Processing flight:");
   Serial.println(flight);
+  
   char *cflight = (char*)malloc(flight.length());
+  
   flight.toCharArray(cflight,flight.length());
-  char *cfrom  = strtok(cflight,",");
-  char *cto    = strtok(NULL,",");
-  char *creg   = strtok(NULL,",");
-  char *cflno  = strtok(NULL,",");
+  
+  char *dummy  = strtok(cflight,",");
+  dummy        = strtok(NULL,",");
+  dummy        = strtok(NULL,",");
+  dummy        = strtok(NULL,",");
   char *calt   = strtok(NULL,",");
   char *cspeed = strtok(NULL,",");
+  dummy        = strtok(NULL,",");
+  dummy        = strtok(NULL,",");
   char *cac    = strtok(NULL,",");
+  char *creg   = strtok(NULL,",");
+  dummy        = strtok(NULL,",");
+  char *cfrom  = strtok(NULL,",");
+  char *cto    = strtok(NULL,",");
+  char *cflno  = strtok(NULL,",");
+  
+  Serial.println("DUMP::::");
+  Serial.println(cfrom);
+  Serial.println(cto);
+  Serial.println(creg);
+  Serial.println(calt);
+  Serial.println(cspeed);
+  Serial.println(cac);
+  Serial.println(cflno);
+  Serial.println("ENDOFDUMP<<<");
 
-  //void display_flight(char* sfrom,char* sto,char* sac,char* salt, char* sspeed,char* sflno, char* sreg){
   display_flight(cfrom,cto,cac,calt,cspeed,cflno,creg);
   delay(30000);
   display.clearDisplay();
-  //ANR,N/A,OO-EPC,OOEPC,6025,0,DA42
+
+  free(cflight);
   
 }
 
+String parse_flight(String json){
+  int start_c = json.indexOf('[',0);
+  String s    = json.substring(start_c); 
+
+  s.replace("\"\"","N/A");
+  s.replace("\"","");
+  
+  return s;
+}
+
 void loop() {
+  String json;
   String flight;
-  flight = get_flight_details();
-  if(flight!="No flight"){
+  
+  json   = get_flight_details();
+  flight = parse_flight(json);
+
+  if(flight!=NULL){
      process_flight(flight);
   }
+  
   delay(30000);
 }
